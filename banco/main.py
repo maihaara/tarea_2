@@ -7,7 +7,7 @@ from datetime import datetime
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="API Banco")
 
-TELCO_URL = "http://localhost:8001"  # cambia si usás otro puerto
+TELCO_URL = "http://localhost:8001" 
 
 @app.get("/consultar_deuda/{ci}")
 def consultar_deuda(ci: str):
@@ -37,12 +37,10 @@ def pagar_deuda(nro_factura: str, monto: float, nro_cuenta: str):
     if monto > factura["saldoPendiente"]:
         raise HTTPException(status_code=400, detail="Monto mayor al saldo pendiente")
 
-    # Llamar a Telco para registrar pago
     telco_res = requests.post(f"{TELCO_URL}/pagar_deuda/", params={"nro_factura": nro_factura, "monto": monto})
     if telco_res.status_code != 200:
         raise HTTPException(status_code=telco_res.status_code, detail=telco_res.json().get("detail"))
 
-    # Registrar en banco
     cuenta.saldo -= monto
     pago = models.PagoServicio(
         fecha=datetime.now().isoformat(),

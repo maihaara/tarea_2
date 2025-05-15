@@ -4,7 +4,6 @@ from database import models
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-# Crear tablas si no existen
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Telco API")
