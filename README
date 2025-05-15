@@ -1,0 +1,92 @@
+Este proyecto simula la integración entre un Banco y una empresa de Telefonía (Telco) usando FastAPI
+
+Estructura del Proyecto
+
+tarea2/
+│
+├── banco/ → API del Banco
+│ └── main.py
+│
+├── telco/ → API de la Telco
+│ └── main.py
+│
+├── database/ → Modelos y conexión DB
+│ ├── database.py
+│ ├── models.py
+│
+├── datos.py → Carga inicial de datos de prueba
+├── telco_banco.db → Archivo SQLite compartido
+├── requirements.txt → Dependencias del proyecto
+├── README.md → (este archivo)
+
+Requisitos
+Python 3.9+
+FastAPI
+Uvicorn
+SQLAlchemy
+equests
+
+Puedes instalar los requisitos con:
+pip install -r requirements.txt
+
+Instalación de Dependencias
+
+En PowerShell (como administrador):
+
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+
+Carga de Datos Iniciales
+Para poblar la base de datos con datos de prueba:
+python datos.py
+
+Esto creará:
+2 Clientes
+2 Cuentas de débito
+3 Facturas pendientes
+1 Pago de ejemplo
+
+Ejecución de las APIs
+Debes ejecutar ambas APIs en terminales distintas:
+Ejecutar Telco (puerto 8001):
+python -m uvicorn telco.main:app --reload --port 8001
+
+Ejecutar Banco (puerto 8000):
+python -m uvicorn banco.main:app --reload --port 8000
+
+Endpoints Disponibles
+Telco API - http://localhost:8001/docs
+
+GET /consultar_deuda/{ci}
+→ Devuelve facturas pendientes de un cliente (por CI)
+
+POST /pagar_deuda?nro_factura=F0001&monto=100
+→ Aplica pago a una factura si es válido
+
+
+Banco API - http://localhost:8000/docs
+GET /consultar_deuda/{ci}
+→ Devuelve deudas del cliente llamando a Telco
+
+POST /pagar_deuda?nro_factura=F0001&monto=100&nro_cuenta=001-123456
+→ Valida saldo y realiza pago a Telco si es correcto
+
+
+Acceso a Documentación Interactiva
+
+Una vez corras ambos servidores, accede a:
+
+Banco → http://localhost:8000/docs
+
+Telco → http://localhost:8001/docs
+
+Desde allí puedes probar fácilmente los endpoints.
+Casos de prueba sugeridos
+
+Consultar deudas del cliente Juan (CI: 12345678) en el Banco:
+→ GET http://localhost:8000/consultar_deuda/12345678
+
+Pagar 200 a la factura F0001 desde cuenta 001-123456:
+→ POST http://localhost:8000/pagar_deuda/?nro_factura=F0001&monto=200&nro_cuenta=001-123456
+
