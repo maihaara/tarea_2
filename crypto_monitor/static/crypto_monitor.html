@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Monitor Criptomonedas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+    body {
+      font-family: 'Poppins', Arial, sans-serif;
+      background: #121212;
+      color: #e0e0e0;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    h2 {
+      font-weight: 600;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      color: #00ff99;
+      text-shadow: 0 0 5px #00ff99aa;
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      color: #b0b0b0;
+    }
+
+    label {
+      margin: 0 12px;
+      font-weight: 500;
+      font-size: 1.1rem;
+      cursor: pointer;
+      user-select: none;
+      color: #ccc;
+      transition: color 0.3s ease;
+    }
+
+    label:hover {
+      color: #00ff99;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 6px;
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      accent-color: #00ff99;
+    }
+
+    #startBtn {
+      margin-top: 30px;
+      padding: 14px 40px;
+      background: linear-gradient(90deg, #00ff99 0%, #00cc77 100%);
+      border: none;
+      border-radius: 30px;
+      color: #121212;
+      font-size: 1.3rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px #00ff9977;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
+    }
+
+    #startBtn:hover {
+      background: linear-gradient(90deg, #00cc77 0%, #009955 100%);
+      box-shadow: 0 6px 20px #00ffbb99;
+    }
+
+    #prices {
+      margin-top: 40px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .crypto {
+      font-size: 1.4rem;
+      margin: 12px 0;
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: #1f1f1f;
+      box-shadow: 0 0 8px #000000aa;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #ddd;
+      font-weight: 600;
+      transition: background 0.3s ease;
+    }
+
+    .price-up {
+      color: #4ade80; /* verde claro */
+      font-weight: 700;
+      text-shadow: 0 0 4px #4ade8077;
+    }
+
+    .price-down {
+      color: #f87171; /* rojo suave */
+      font-weight: 700;
+      text-shadow: 0 0 4px #f8717177;
+    }
+
+    .trend-arrow {
+      font-size: 1.6rem;
+      margin-left: 12px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <h2>Monitor de Criptomonedas</h2>
+
+  <p>Selecciona las criptomonedas que quieres monitorear:</p>
+  <div>
+    <label><input type="checkbox" value="BTC" checked /> BTC</label>
+    <label><input type="checkbox" value="ETH" checked /> ETH</label>
+    <label><input type="checkbox" value="XRP" /> XRP</label>
+    <label><input type="checkbox" value="LTC" /> LTC</label>
+    <label><input type="checkbox" value="DOGE" /> DOGE</label>
+  </div>
+
+  <button id="startBtn">Iniciar Monitor</button>
+
+  <div id="prices"></div>
+
+  <script>
+    const startBtn = document.getElementById("startBtn");
+    const pricesDiv = document.getElementById("prices");
+    let ws = null;
+    const priceHistory = {}; // Para almacenar los últimos precios (hasta 10)
+
+    startBtn.onclick = () => {
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+
+      const checkboxes = document.querySelectorAll("input[type=checkbox]");
+      const preferences = [];
+      checkboxes.forEach(cb => {
+        if (cb.checked) preferences.push(cb.value);
+      });
+
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      const wsUrl = `${protocol}://${window.location.host}/ws/crypto_prices`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ preferences }));
+        pricesDiv.innerHTML = "<p>Conectado. Esperando datos...</p>";
+      };
+
+      ws.onmessage = event => {
+        const data = JSON.parse(event.data);
+        pricesDiv.innerHTML = "";
+
+        for (const [crypto, price] of Object.entries(data)) {
+          if (!priceHistory[crypto]) priceHistory[crypto] = [];
+
+          // Mantener solo últimos 10 precios
+          priceHistory[crypto].push(price);
+          if (priceHistory[crypto].length > 10) {
+            priceHistory[crypto].shift();
+          }
+
+          // Calcular tendencia usando últimos 2 precios
+          const len = priceHistory[crypto].length;
+          let trend = "";
+          if (len > 1) {
+            const last = priceHistory[crypto][len - 1];
+            const prev = priceHistory[crypto][len - 2];
+            if (last > prev) trend = "↑";
+            else if (last < prev) trend = "↓";
+          }
+
+          const trendClass = trend === "↑" ? "price-up" : trend === "↓" ? "price-down" : "";
+
+          pricesDiv.innerHTML += `
+            <div class="crypto ${trendClass}">
+              <span>${crypto}: $${price.toFixed(2)}</span>
+              <span class="trend-arrow">${trend}</span>
+            </div>`;
+        }
+      };
+
+      ws.onclose = () => {
+        pricesDiv.innerHTML = "<p>Conexión cerrada.</p>";
+      };
+
+      ws.onerror = () => {
+        pricesDiv.innerHTML = "<p>Error en la conexión.</p>";
+      };
+    };
+  </script>
+
+</body>
+</html>
+
+
+
